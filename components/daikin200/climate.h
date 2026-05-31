@@ -16,9 +16,20 @@ namespace esphome
       climate::ClimateTraits traits() override;
 
     protected:
+      // sender
       void build_frame();
       void send_frame();
       uint8_t frame[25]{0}; // your Daikin200 payload buffer
+
+      // Receiver helpers
+      bool validate_frame_(const uint8_t *frame, size_t len);
+      void decode_mode_(const uint8_t *frame);
+      void decode_temperature_(const uint8_t *frame);
+      void decode_fan_(const uint8_t *frame);
+      void decode_swing_(const uint8_t *frame);
+
+      uint8_t calculate_checksum_(const uint8_t *frame);
+      bool validate_checksum_(const uint8_t *frame);
     };
   } // namespace daikin200
 } // namespace esphome
