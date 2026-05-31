@@ -20,7 +20,7 @@ climate::ClimateTraits Daikin200Climate::traits() {
     climate::CLIMATE_MODE_FAN_ONLY
   });
 
-  t.set_supports_current_temperature(false);
+
   t.set_visual_min_temperature(16);
   t.set_visual_max_temperature(30);
   t.set_visual_temperature_step(0.5);
