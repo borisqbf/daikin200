@@ -3,11 +3,26 @@
 namespace esphome {
 namespace daikin200 {
 
-static const char *TAG = "daikin200.climate";
+void Daikin200Climate::setup() {}
 
-// THIS IS THE CRITICAL PART
-class Daikin200ClimateComponent : public Daikin200Climate {
-};
+void Daikin200Climate::control(const climate::ClimateCall &call) {
+  // your IR logic here
+}
+
+climate::ClimateTraits Daikin200Climate::traits() {
+  auto traits = climate::ClimateTraits();
+
+  traits.set_supported_modes({
+    climate::CLIMATE_MODE_OFF,
+    climate::CLIMATE_MODE_COOL,
+    climate::CLIMATE_MODE_HEAT,
+    climate::CLIMATE_MODE_AUTO,
+    climate::CLIMATE_MODE_FAN_ONLY,
+    climate::CLIMATE_MODE_DRY
+  });
+
+  return traits;
+}
 
 }  // namespace daikin200
 }  // namespace esphome

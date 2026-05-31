@@ -34,3 +34,5 @@ class Daikin200Climate : public climate::Climate, public Component {
 
 }  // namespace daikin200
 }  // namespace esphome
+// REGISTER PLATFORM (THIS IS WHAT MAKES platform: daikin200 WORK)
+DECLARE_ESPHOME_COMPONENT(daikin200);
