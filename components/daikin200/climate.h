@@ -1,5 +1,5 @@
 #pragma once
-#include "IRremoteESP8266.h"
+
 #include "esphome/components/climate/climate.h"
 #include "esphome/core/component.h"
 
@@ -11,11 +11,11 @@ class Daikin200Climate : public climate::Climate, public Component {
   void setup() override;
   void control(const climate::ClimateCall &call) override;
   climate::ClimateTraits traits() override;
-  protected:
-  
-  IRDaikin200 *ac_; 
 
+ protected:
+  void build_frame();
+  void send_frame();
+  uint8_t encode_airflow(int fan, int swing)
+
+  uint8_t frame[25]{0};  // your Daikin200 payload buffer
 };
-
-}  // namespace daikin200
-}  // namespace esphome

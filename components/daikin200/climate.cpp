@@ -1,17 +1,21 @@
-#include "esphome/components/climate/climate.h"
-#include "esphome/core/component.h"
+#include "climate.h"
 #include "esphome/core/log.h"
-
-
 
 namespace esphome {
 namespace daikin200 {
 
 static const char *TAG = "daikin200";
 
+uint8_t base_frame[25] = {
+  0x11, 0xDA, 0x17, 0x48, 0x04,
+  0x00, 0x4E, 0x11, 0xDA, 0x17,
+  0x48, 0x00, 0x73, 0x00, 0x21,
+  0x00, 0x00, 0x1C, 0x50, 0x00,
+  0x20, 0x00, 0x00, 0x00, 0x6A
+};
+
 void Daikin200Climate::setup() {
-  ac_ = new IRDaikin200(4);   // GPIO pin
-  ac_->begin();
+  ESP_LOGI(TAG, "Daikin200 climate setup complete");
 }
 
 climate::ClimateTraits Daikin200Climate::traits() {
@@ -37,69 +41,133 @@ climate::ClimateTraits Daikin200Climate::traits() {
 // ------------------------------
 // AIRFLOW ENCODER
 // ------------------------------
-uint8_t Daikin200Climate::encode_airflow(int fan, int swing) {
 
-  if (swing == 1) return 0x52;
-  if (swing == 2) return 0x5F;
-
-  switch (fan) {
-    case 0: return 0x0F;
-    case 1: return 0x1F;
-    case 2: return 0x2F;
-    case 3: return 0x3F;
-    case 4: return 0x5F;
-    default: return 0x3F;
-  }
-}
 
 void Daikin200Climate::control(const climate::ClimateCall &call) {
 
+  // Update ESPHome internal state
   if (call.get_mode().has_value())
     this->mode = *call.get_mode();
 
   if (call.get_target_temperature().has_value())
     this->target_temperature = *call.get_target_temperature();
 
+ if (call.get_swing_mode().has_value()) {
+    this->swing_mode = *call.get_swing_mode();
+}
+
+  // Rebuild IR frame from new state
+  this->build_frame();
+
+  // Send IR signal
+  this->send_frame();
+
+  // Publish updated state to Home Assistant
+  this->publish_state();
+}
+
+void Daikin200Climate::build_frame() {
+  memcpy(frame, base_frame, 25);
+
+  // -------------------------
+  // MODE
+  // -------------------------
   switch (this->mode) {
 
-    case climate::CLIMATE_MODE_OFF:
-      ac_->off();
-      break;
-
     case climate::CLIMATE_MODE_COOL:
-      ac_->on();
-      ac_->setMode(kDaikinCool);
+      frame[MODE_BYTE] = 0x73;
       break;
 
     case climate::CLIMATE_MODE_HEAT:
-      ac_->on();
-      ac_->setMode(kDaikinHeat);
+      frame[MODE_BYTE] = 0x51;
       break;
 
     case climate::CLIMATE_MODE_DRY:
-      ac_->on();
-      ac_->setMode(kDaikinDry);
-      break;
-
-    case climate::CLIMATE_MODE_FAN_ONLY:
-      ac_->on();
-      ac_->setMode(kDaikinFan);
+      frame[MODE_BYTE] = 0x47;
       break;
 
     case climate::CLIMATE_MODE_AUTO:
-      ac_->on();
-      ac_->setMode(kDaikinAuto);
+      frame[MODE_BYTE] = 0x43;
+      break;
+
+    case climate::CLIMATE_MODE_FAN_ONLY:
+      frame[MODE_BYTE] = 0x40;
       break;
 
     default:
+      frame[MODE_BYTE] = 0x00;
       break;
   }
 
-  ac_->setTemp((uint8_t)this->target_temperature);
+  // -------------------------
+  // TEMP
+  // -------------------------
+  uint8_t temp = (uint8_t) this->target_temperature;
+  if (temp < 16) temp = 16;
+  if (temp > 30) temp = 30;
 
-  ac_->send();
+  frame[TEMP_BYTE] = 0x1A + (temp - 22) * 2;
 
-  this->publish_state();
+  // -------------------------
+  // FAN (ESPHome-native)
+  // -------------------------
+  switch (this->fan_mode.value_or(climate::CLIMATE_FAN_AUTO)) {
+
+    case climate::CLIMATE_FAN_LOW:
+      frame[FAN_BYTE] = 0x1F;
+      break;
+
+    case climate::CLIMATE_FAN_MEDIUM:
+      frame[FAN_BYTE] = 0x3F;
+      break;
+
+    case climate::CLIMATE_FAN_HIGH:
+      frame[FAN_BYTE] = 0x5F;
+      break;
+
+    case climate::CLIMATE_FAN_AUTO:
+    default:
+      frame[FAN_BYTE] = 0x0F;
+      break;
+  }
+
+  // -------------------------
+  // SWING (ESPHome-native)
+  // -------------------------
+  switch (this->swing_mode) {
+
+    case climate::CLIMATE_SWING_VERTICAL:
+      frame[SWING_BYTE] = 0x52;
+      frame[SWING_BYTE2] = 0x00;
+      break;
+
+    case climate::CLIMATE_SWING_BOTH:
+      frame[SWING_BYTE] = 0x5F;
+      frame[SWING_BYTE2] = 0x00;
+      break;
+
+    case climate::CLIMATE_SWING_OFF:
+    default:
+      frame[SWING_BYTE] = 0x20;
+      frame[SWING_BYTE2] = 0x00;
+      break;
+  }
+
+  // -------------------------
+  // CHECKSUM
+  // -------------------------
+  uint8_t sum = 0;
+  for (int i = 0; i < CHECKSUM_BYTE; i++) {
+    sum += frame[i];
+  }
+
+  frame[CHECKSUM_BYTE] = sum;
+}
+
+void Daikin200Climate::send_frame() {
+  // Placeholder for ESPHome IR transmission
+
+  ESP_LOGD(TAG, "Sending IR frame (not implemented yet)");
 }
 
 }  // namespace daikin200
