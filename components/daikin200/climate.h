@@ -15,7 +15,7 @@ class Daikin200Climate : public climate::Climate, public Component {
  protected:
   void build_frame();
   void send_frame();
-  uint8_t encode_airflow(int fan, int swing)
-
   uint8_t frame[25]{0};  // your Daikin200 payload buffer
 };
+}  // namespace daikin200
+}  // namespace esphome
