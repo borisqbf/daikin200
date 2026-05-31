@@ -25,6 +25,10 @@ static constexpr uint8_t CHECKSUM_BYTE = 24;
 
 void Daikin200Climate::setup() {
   ESP_LOGI(TAG, "Daikin200 climate setup complete");
+    this->mode = climate::CLIMATE_MODE_OFF;
+  this->target_temperature = 21.0f;   // 🔥 MUST NOT BE NULL
+
+  this->publish_state();
 }
 
 climate::ClimateTraits Daikin200Climate::traits() {
@@ -53,6 +57,9 @@ climate::ClimateTraits Daikin200Climate::traits() {
 
 
 void Daikin200Climate::control(const climate::ClimateCall &call) {
+
+  if (std::isnan(this->target_temperature)) {
+  this->target_temperature = 21.0f;
 
   // Update ESPHome internal state
   if (call.get_mode().has_value())
@@ -177,6 +184,8 @@ void Daikin200Climate::send_frame() {
   // Placeholder for ESPHome IR transmission
 
   ESP_LOGD(TAG, "Sending IR frame (not implemented yet)");
+  for (int i = 0; i < 25; i++) {
+    ESP_LOGI("daikin200", "frame[%d]=0x%02X", i, frame[i]);
 }
 
 }  // namespace daikin200
