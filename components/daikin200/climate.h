@@ -10,8 +10,6 @@ class Daikin200Climate : public climate::Climate, public Component {
  public:
   void setup() override;
   void control(const climate::ClimateCall &call) override;
-
- protected:
   climate::ClimateTraits traits() override;
 };
 
