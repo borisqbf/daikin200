@@ -1,12 +1,18 @@
-#include "climate.h"
+#include "esphome/components/climate/climate.h"
+#include "esphome/core/component.h"
 #include "esphome/core/log.h"
+
+#include <ir_Daikin.h>
 
 namespace esphome {
 namespace daikin200 {
 
 static const char *TAG = "daikin200";
 
-void Daikin200Climate::setup() {}
+void Daikin200Climate::setup() {
+  ac_ = new IRDaikin200(4);   // GPIO pin
+  ac_->begin();
+}
 
 climate::ClimateTraits Daikin200Climate::traits() {
   auto t = climate::ClimateTraits();
@@ -46,96 +52,54 @@ uint8_t Daikin200Climate::encode_airflow(int fan, int swing) {
   }
 }
 
-// ------------------------------
-// FRAME BUILDER
-// ------------------------------
-void Daikin200Climate::build_frame() {
+void Daikin200Climate::control(const climate::ClimateCall &call) {
 
-  memset(frame, 0, sizeof(frame));
+  if (call.get_mode().has_value())
+    this->mode = *call.get_mode();
 
-  frame[0] = 0x11; frame[1] = 0xDA; frame[2] = 0x17;
-  frame[3] = 0x48; frame[4] = 0x04; frame[5] = 0x00;
-  frame[6] = 0x4E;
+  if (call.get_target_temperature().has_value())
+    this->target_temperature = *call.get_target_temperature();
 
-  frame[7] = 0x11; frame[8] = 0xDA; frame[9] = 0x17;
-  frame[10] = 0x48; frame[11] = 0x00; frame[12] = 0x73;
-
-  // MODE
   switch (this->mode) {
+
+    case climate::CLIMATE_MODE_OFF:
+      ac_->off();
+      break;
+
     case climate::CLIMATE_MODE_COOL:
-      frame[13] = 0x42;
-      frame[14] = 0x10;
+      ac_->on();
+      ac_->setMode(kDaikinCool);
       break;
 
     case climate::CLIMATE_MODE_HEAT:
-      frame[13] = 0x04;
-      frame[14] = 0x11;
-      break;
-
-    case climate::CLIMATE_MODE_FAN_ONLY:
-      frame[13] = 0x04;
-      frame[14] = 0x01;
+      ac_->on();
+      ac_->setMode(kDaikinHeat);
       break;
 
     case climate::CLIMATE_MODE_DRY:
-      frame[13] = 0x04;
-      frame[14] = 0x71;
+      ac_->on();
+      ac_->setMode(kDaikinDry);
+      break;
+
+    case climate::CLIMATE_MODE_FAN_ONLY:
+      ac_->on();
+      ac_->setMode(kDaikinFan);
       break;
 
     case climate::CLIMATE_MODE_AUTO:
-      frame[13] = 0x04;
-      frame[14] = 0x31;
+      ac_->on();
+      ac_->setMode(kDaikinAuto);
+      break;
+
+    default:
       break;
   }
 
-  // TEMP
-  frame[15] = encode_temp(this->target_temp);
+  ac_->setTemp((uint8_t)this->target_temperature);
 
-  // AIRFLOW
-  frame[16] = encode_airflow(this->fan, this->swing);
-
-  // padding (fixed pattern observed)
-  frame[17] = 0x00;
-  frame[18] = 0x20;
-  frame[19] = 0x00;
-  frame[20] = 0x00;
-  frame[21] = 0x00;
-  frame[22] = 0x00;
-  frame[23] = 0x00;
-
-  // CHECKSUM
-  uint8_t sum = 0;
-  for (int i = 13; i < 24; i++) sum += frame[i];
-  frame[24] = sum;
-}
-
-// ------------------------------
-// SEND (hook ESPHome IR)
-// ------------------------------
-void Daikin200Climate::send_frame() {
-  this->build_frame();
-  auto call = id(remote_transmitter);
-  call->transmit_raw((std::vector<int>)frame, 38);
-}
-
-
-void Daikin200Climate::control(const climate::ClimateCall &call) {
-  if (call.get_mode().has_value()) {
-    this->mode = *call.get_mode();
-  }
-
-  if (call.get_target_temperature().has_value()) {
-    this->target_temperature = *call.get_target_temperature();
-  }
-
-  if (call.get_fan_mode().has_value())
-    this->fan = *call.get_fan_mode();
-
-  this->send_frame();
+  ac_->send();
 
   this->publish_state();
-
-  ESP_LOGD(TAG, "Climate updated");
 }
 
 }  // namespace daikin200
