@@ -14,6 +14,15 @@ uint8_t base_frame[25] = {
   0x20, 0x00, 0x00, 0x00, 0x6A
 };
 
+static constexpr uint8_t DAIKIN_MODE_BYTE = 12;
+static constexpr uint8_t DAIKIN_TEMP_BYTE = 16;
+static constexpr uint8_t DAIKIN_FAN_BYTE = 17;
+static constexpr uint8_t DAIKIN_SWING_BYTE_1 = 18;
+static constexpr uint8_t DAIKIN_SWING_BYTE_2 = 19;
+static constexpr uint8_t DAIKIN_CHECKSUM_BYTE = 24;
+
+
+
 void Daikin200Climate::setup() {
   ESP_LOGI(TAG, "Daikin200 climate setup complete");
 }
