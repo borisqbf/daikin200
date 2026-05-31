@@ -2,7 +2,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/log.h"
 
-#include <ir_Daikin.h>
+
 
 namespace esphome {
 namespace daikin200 {
