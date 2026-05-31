@@ -6,9 +6,3 @@ codeowners:
 
 dependencies:
   - esphome
-
-external_components:
-  - source: local
-    components:
-      - daikin200
-      
