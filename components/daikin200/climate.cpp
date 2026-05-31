@@ -146,19 +146,19 @@ void Daikin200Climate::build_frame() {
   switch (this->swing_mode) {
 
     case climate::CLIMATE_SWING_VERTICAL:
-      frame[SWING_BYTE] = 0x52;
-      frame[SWING_BYTE2] = 0x00;
+      frame[SWING_BYTE_1] = 0x52;
+      frame[SWING_BYTE_2] = 0x00;
       break;
 
     case climate::CLIMATE_SWING_BOTH:
-      frame[SWING_BYTE] = 0x5F;
-      frame[SWING_BYTE2] = 0x00;
+      frame[SWING_BYTE_1] = 0x5F;
+      frame[SWING_BYTE_2] = 0x00;
       break;
 
     case climate::CLIMATE_SWING_OFF:
     default:
-      frame[SWING_BYTE] = 0x20;
-      frame[SWING_BYTE2] = 0x00;
+      frame[SWING_BYTE_1] = 0x20;
+      frame[SWING_BYTE_2] = 0x00;
       break;
   }
 
