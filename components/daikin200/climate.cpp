@@ -1,3 +1,5 @@
+
+#include <vector>
 #include "climate.h"
 #include "esphome/core/log.h"
 
@@ -187,38 +189,46 @@ namespace esphome
       frame[CHECKSUM_BYTE] = sum;
     }
 
-    void Daikin200Climate::send_frame()
+void Daikin200Climate::send_frame()
+{
+  auto call = this->transmitter_->transmit();
+
+  call.set_carrier_frequency(38000);
+
+  std::vector<int> data;
+
+  // Header
+  data.push_back(3500);
+  data.push_back(1700);
+
+  for (int i = 0; i < 25; i++)
+  {
+    uint8_t b = frame[i];
+
+    ESP_LOGI("daikin200", "frame[%d]=0x%02X", i, b);
+
+    for (int bit = 7; bit >= 0; bit--)
     {
-      auto tx = this->transmitter_->transmit();
-      tx.set_carrier_frequency(38000);
-
-      // Header
-      tx.item(3500, 1700);
-
-      for (int i = 0; i < 25; i++)
+      if (b & (1 << bit))
       {
-        uint8_t b = frame[i];
-        ESP_LOGI("daikin200", "frame[%d]=0x%02X", i, b);
-
-        // MSB-first (IMPORTANT FIX)
-        for (int bit = 7; bit >= 0; bit--)
-        {
-          if (b & (1 << bit))
-          {
-            tx.item(430, 1300); // '1'
-          }
-          else
-          {
-            tx.item(430, 420); // '0'
-          }
-        }
+        data.push_back(430);
+        data.push_back(1300);
       }
-
-      // Optional stop / gap (depends on protocol)
-      tx.item(430, 8000);
-
-      tx.perform();
+      else
+      {
+        data.push_back(430);
+        data.push_back(420);
+      }
     }
+  }
+
+  // Stop gap
+  data.push_back(430);
+  data.push_back(8000);
+
+  call.set_data(data);
+  call.perform();
+}
 
     void Daikin200Climate::process_received_frame(const uint8_t *data, size_t len)
     {
