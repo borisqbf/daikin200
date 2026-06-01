@@ -2,6 +2,7 @@
 
 #include "esphome/components/climate/climate.h"
 #include "esphome/core/component.h"
+#include "esphome/components/remote_base/remote_base.h"
 
 namespace esphome
 {
@@ -14,6 +15,10 @@ namespace esphome
       void setup() override;
       void control(const climate::ClimateCall &call) override;
       climate::ClimateTraits traits() override;
+      void set_transmitter(remote_base::RemoteTransmitterComponent *tx)
+      {
+        this->transmitter_ = tx;
+      }
 
     protected:
       // sender
@@ -30,6 +35,8 @@ namespace esphome
 
       uint8_t calculate_checksum_(const uint8_t *frame);
       bool validate_checksum_(const uint8_t *frame);
+      process_received_frame(const uint8_t *data, size_t len);
+      remote_base::RemoteTransmitterComponent *transmitter_{nullptr};
     };
   } // namespace daikin200
 } // namespace esphome

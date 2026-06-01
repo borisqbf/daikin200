@@ -196,7 +196,7 @@ namespace esphome
       {
       }
 
-      auto tx = id(remote_transmitter).transmit_raw();
+      auto tx = this->transmitter_->transmit_raw();
 
       // Header
       tx.item(3500, 1700);
@@ -223,9 +223,7 @@ namespace esphome
       tx.perform();
     }
 
-    void Daikin200Climate::process_received_frame(
-        const uint8_t *frame,
-        size_t len)
+    void Daikin200Climate::process_received_frame(const uint8_t *data, size_t len)
     {
 
       if (!this->validate_frame_(frame, len))
