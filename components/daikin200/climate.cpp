@@ -196,9 +196,8 @@ namespace esphome
 
       data->set_carrier_frequency(38000);
 
-      std::vector<std::pair<uint32_t, uint32_t>> pulses;
-
-      pulses.emplace_back(3500, 1700);
+      // Header
+      data->item(3500, 1700);
 
       for (int i = 0; i < 25; i++)
       {
@@ -208,25 +207,19 @@ namespace esphome
         {
           if (b & (1 << bit))
           {
-            pulses.emplace_back(430, 1300);
+            data->item(430, 1300);
           }
           else
           {
-            pulses.emplace_back(430, 420);
+            data->item(430, 420);
           }
         }
       }
 
-      pulses.emplace_back(430, 8000);
-
-      for (auto &p : pulses)
-      {
-        data->push_back(p);
-      }
+      data->item(430, 8000);
 
       transmit.perform();
     }
-
     void Daikin200Climate::process_received_frame(const uint8_t *data, size_t len)
     {
 
