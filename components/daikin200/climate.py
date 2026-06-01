@@ -5,12 +5,10 @@ from esphome.const import CONF_ID, CONF_NAME
 
 from . import Daikin200Climate
 
-
-
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(Daikin200Climate),
     cv.Optional(CONF_NAME): cv.string,
-}).extend(cv.COMPONENT_SCHEMA)xtend(cv.COMPONENT_SCHEMA)
+}).extend(cv.COMPONENT_SCHEMA)
 
 
 def to_code(config):
