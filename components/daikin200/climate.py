@@ -1,12 +1,11 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import climate
-from esphome.components import remote_transmitter
-
-from esphome.const import CONF_ID, CONF_NAME
-
+from esphome.components import climate, remote_transmitter
+from esphome.const import CONF_ID
 
 from . import Daikin200Climate
+
+DEPENDENCIES = ["climate"]
 
 CONFIG_SCHEMA = climate._CLIMATE_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(Daikin200Climate),
@@ -14,13 +13,11 @@ CONFIG_SCHEMA = climate._CLIMATE_SCHEMA.extend({
 }).extend(cv.COMPONENT_SCHEMA)
 
 
-def to_code(config):
+async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
-    tx = yield cg.get_variable(config["remote_transmitter"])
+
+    tx = await cg.get_variable(config["remote_transmitter"])
     cg.add(var.set_transmitter(tx))
 
-    yield cg.register_component(var, config)
-    yield climate.register_climate(var, config)
-
-
-climate.register_climate_platform("daikin200", CONFIG_SCHEMA)
+    await cg.register_component(var, config)
+    await climate.register_climate(var, config)
