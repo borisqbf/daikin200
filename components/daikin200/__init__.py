@@ -1,4 +1,3 @@
-print("\n\n🔥 DAIKIN200 INIT LOADED - 1🔥\n\n")
 
 import esphome.codegen as cg
 from esphome.components import climate
