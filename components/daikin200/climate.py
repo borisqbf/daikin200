@@ -5,7 +5,7 @@ from esphome.const import CONF_ID
 
 from . import Daikin200Climate
 
-CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend({
+CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(Daikin200Climate),
 }).extend(cv.COMPONENT_SCHEMA)
 
@@ -15,3 +15,4 @@ def to_code(config):
     cg.add(var)
     yield cg.register_component(var, config)
     yield climate.register_climate(var, config)
+    
