@@ -191,221 +191,213 @@ namespace esphome
 
     void Daikin200Climate::send_frame()
     {
+      if (this->transmitter_ == nullptr)
+      {
+        ESP_LOGE("daikin200", "No transmitter configured");
+        return;
+      }
+
       auto call = this->transmitter_->transmit();
-      auto *data = call.get_data();
+      call.set_carrier_frequency(38000);
 
-      data->mark(3500);
-      data->space(1700);
+      std::vector<int> data;
+      data.reserve(400); // avoid reallocations
 
+      // -----------------------------
+      // DAIKIN HEADER (IRremoteESP8266 standard)
+      // -----------------------------
+      constexpr int HEADER_MARK = 3500;
+      constexpr int HEADER_SPACE = 1700;
+
+      constexpr int BIT_MARK = 430;
+      constexpr int ONE_SPACE = 1300;
+      constexpr int ZERO_SPACE = 420;
+
+      constexpr int FOOTER_MARK = 430;
+      constexpr int FOOTER_SPACE = 8000;
+
+      data.push_back(HEADER_MARK);
+      data.push_back(HEADER_SPACE);
+
+      // -----------------------------
+      // IRREMOTEESP8266 BIT ORDER: LSB FIRST per byte
+      // -----------------------------
       for (int i = 0; i < 25; i++)
       {
-        uint8_t b = frame[i];
+        uint8_t b = this->frame[i];
 
-        ESP_LOGV(TAG, "frame[%d]=0x%02X", i, b);
-
-        for (int bit = 7; bit >= 0; bit--)
+        for (int bit = 0; bit < 8; bit++)
         {
+          data.push_back(BIT_MARK);
+
           if (b & (1 << bit))
           {
-            data->mark(430);
-            data->space(1300);
+            data.push_back(ONE_SPACE);
           }
           else
           {
-            data->mark(430);
-            data->space(420);
+            data.push_back(ZERO_SPACE);
           }
         }
       }
 
-      // stop gap (important for Daikin framing)
-      data->mark(430);
-      data->space(8000);
+      // -----------------------------
+      // FOOTER / STOP BIT
+      // -----------------------------
+      data.push_back(FOOTER_MARK);
+      data.push_back(FOOTER_SPACE);
 
+      call.set_data(data);
       call.perform();
+
+      ESP_LOGD("daikin200", "Sent Daikin200 frame (%d bytes encoded)", data.size());
     }
 
-    // -------------------------
-    // TEMP
-    // -------------------------
-    irdaikin.setTemp((uint8_t)this->target_temperature);
-
-    // -------------------------
-    // FAN (safe mapping)
-    // -------------------------
-    irdaikin.setFan(kDaikin200FanAuto);
-
-    // -------------------------
-    // SWING
-    // -------------------------
-    irdaikin.setSwingV(kDaikin200SwingVOn);
-
-    // -------------------------
-    // TRANSMIT via ESPHome
-    // -------------------------
-    auto call = this->transmitter_->transmit();
-
-    uint16_t raw[300];
-    uint16_t len = irdaikin.getRawBuf(raw);
-
-    std::vector<int> data;
-    data.reserve(len);
-
-    for (int i = 0; i < len; i++)
-    {
-      data.push_back(raw[i]);
-    }
-
-    call.set_carrier_frequency(38000);
-    call.set_data(data);
-    call.perform();
-  }
-
-  void Daikin200Climate::process_received_frame(const uint8_t *data, size_t len)
-  {
-
-    if (!this->validate_frame_(frame, len))
-    {
-      ESP_LOGW("daikin200", "Invalid frame received");
-      return;
-    }
-
-    this->decode_mode_(frame);
-    this->decode_temperature_(frame);
-    this->decode_fan_(frame);
-    this->decode_swing_(frame);
-
-    this->publish_state();
-  }
-
-  bool Daikin200Climate::validate_frame_(
-      const uint8_t *frame,
-      size_t len)
-  {
-
-    if (len != 25)
-    {
-      ESP_LOGW("daikin200", "Unexpected frame length %u", (unsigned)len);
-      return false;
-    }
-
-    return this->validate_checksum_(frame);
-  }
-
-  uint8_t Daikin200Climate::calculate_checksum_(
-      const uint8_t *frame)
-  {
-
-    uint8_t sum = 0;
-
-    for (int i = 0; i < 24; i++)
-    {
-      sum += frame[i];
-    }
-
-    return sum;
-  }
-
-  bool Daikin200Climate::validate_checksum_(
-      const uint8_t *frame)
-  {
-
-    return frame[24] == this->calculate_checksum_(frame);
-  }
-
-  void Daikin200Climate::decode_mode_(
-      const uint8_t *frame)
-  {
-
-    switch (frame[12])
+    void Daikin200Climate::process_received_frame(const uint8_t *data, size_t len)
     {
 
-    case 0x73:
-      this->mode = climate::CLIMATE_MODE_COOL;
-      break;
+      if (!this->validate_frame_(frame, len))
+      {
+        ESP_LOGW("daikin200", "Invalid frame received");
+        return;
+      }
 
-    case 0x51:
-      this->mode = climate::CLIMATE_MODE_HEAT;
-      break;
+      this->decode_mode_(frame);
+      this->decode_temperature_(frame);
+      this->decode_fan_(frame);
+      this->decode_swing_(frame);
 
-    case 0x43:
-      this->mode = climate::CLIMATE_MODE_AUTO;
-      break;
-
-    case 0x47:
-      this->mode = climate::CLIMATE_MODE_DRY;
-      break;
-
-    case 0x40:
-      this->mode = climate::CLIMATE_MODE_FAN_ONLY;
-      break;
-
-    default:
-      ESP_LOGW("daikin200", "Unknown mode byte 0x%02X", frame[12]);
-      break;
+      this->publish_state();
     }
-  }
 
-  void Daikin200Climate::decode_temperature_(
-      const uint8_t *frame)
-  {
-
-    this->target_temperature =
-        22.0f + ((int)frame[16] - 0x1A) / 2.0f;
-  }
-
-  void Daikin200Climate::decode_fan_(
-      const uint8_t *frame)
-  {
-
-    switch (frame[17])
+    bool Daikin200Climate::validate_frame_(
+        const uint8_t *frame,
+        size_t len)
     {
 
-    case 0x0F:
-      this->fan_mode = climate::CLIMATE_FAN_AUTO;
-      break;
+      if (len != 25)
+      {
+        ESP_LOGW("daikin200", "Unexpected frame length %u", (unsigned)len);
+        return false;
+      }
 
-    case 0x1F:
-      this->fan_mode = climate::CLIMATE_FAN_LOW;
-      break;
-
-    case 0x3F:
-      this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
-      break;
-
-    case 0x5F:
-      this->fan_mode = climate::CLIMATE_FAN_HIGH;
-      break;
-
-    default:
-      ESP_LOGW("daikin200", "Unknown fan byte 0x%02X", frame[17]);
-      break;
+      return this->validate_checksum_(frame);
     }
-  }
 
-  void Daikin200Climate::decode_swing_(
-      const uint8_t *frame)
-  {
-
-    switch (frame[18])
+    uint8_t Daikin200Climate::calculate_checksum_(
+        const uint8_t *frame)
     {
 
-    case 0x20:
-      this->swing_mode = climate::CLIMATE_SWING_OFF;
-      break;
+      uint8_t sum = 0;
 
-    case 0x52:
-      this->swing_mode = climate::CLIMATE_SWING_VERTICAL;
-      break;
+      for (int i = 0; i < 24; i++)
+      {
+        sum += frame[i];
+      }
 
-    case 0x5F:
-      this->swing_mode = climate::CLIMATE_SWING_BOTH;
-      break;
-
-    default:
-      ESP_LOGW("daikin200", "Unknown swing byte 0x%02X", frame[18]);
-      break;
+      return sum;
     }
-  }
-} // namespace daikin200
+
+    bool Daikin200Climate::validate_checksum_(
+        const uint8_t *frame)
+    {
+
+      return frame[24] == this->calculate_checksum_(frame);
+    }
+
+    void Daikin200Climate::decode_mode_(
+        const uint8_t *frame)
+    {
+
+      switch (frame[12])
+      {
+
+      case 0x73:
+        this->mode = climate::CLIMATE_MODE_COOL;
+        break;
+
+      case 0x51:
+        this->mode = climate::CLIMATE_MODE_HEAT;
+        break;
+
+      case 0x43:
+        this->mode = climate::CLIMATE_MODE_AUTO;
+        break;
+
+      case 0x47:
+        this->mode = climate::CLIMATE_MODE_DRY;
+        break;
+
+      case 0x40:
+        this->mode = climate::CLIMATE_MODE_FAN_ONLY;
+        break;
+
+      default:
+        ESP_LOGW("daikin200", "Unknown mode byte 0x%02X", frame[12]);
+        break;
+      }
+    }
+
+    void Daikin200Climate::decode_temperature_(
+        const uint8_t *frame)
+    {
+
+      this->target_temperature =
+          22.0f + ((int)frame[16] - 0x1A) / 2.0f;
+    }
+
+    void Daikin200Climate::decode_fan_(
+        const uint8_t *frame)
+    {
+
+      switch (frame[17])
+      {
+
+      case 0x0F:
+        this->fan_mode = climate::CLIMATE_FAN_AUTO;
+        break;
+
+      case 0x1F:
+        this->fan_mode = climate::CLIMATE_FAN_LOW;
+        break;
+
+      case 0x3F:
+        this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+        break;
+
+      case 0x5F:
+        this->fan_mode = climate::CLIMATE_FAN_HIGH;
+        break;
+
+      default:
+        ESP_LOGW("daikin200", "Unknown fan byte 0x%02X", frame[17]);
+        break;
+      }
+    }
+
+    void Daikin200Climate::decode_swing_(
+        const uint8_t *frame)
+    {
+
+      switch (frame[18])
+      {
+
+      case 0x20:
+        this->swing_mode = climate::CLIMATE_SWING_OFF;
+        break;
+
+      case 0x52:
+        this->swing_mode = climate::CLIMATE_SWING_VERTICAL;
+        break;
+
+      case 0x5F:
+        this->swing_mode = climate::CLIMATE_SWING_BOTH;
+        break;
+
+      default:
+        ESP_LOGW("daikin200", "Unknown swing byte 0x%02X", frame[18]);
+        break;
+      }
+    }
+  } // namespace daikin200
 } // namespace esphome
