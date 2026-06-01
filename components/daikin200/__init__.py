@@ -4,7 +4,7 @@ from esphome.components import climate
 from esphome.const import CONF_ID
 
 DEPENDENCIES = ["climate"]
-AUTO_LOAD = []
+AUTO_LOAD = ["climate"]
 
 daikin200_ns = cg.esphome_ns.namespace("daikin200")
 
