@@ -3,6 +3,10 @@
 #include "climate.h"
 #include "esphome/core/log.h"
 
+#include <IRremoteESP8266.h>
+#include <IRsend.h>
+#include <ir_Daikin.h>
+
 namespace esphome
 {
   namespace daikin200
@@ -189,37 +193,74 @@ namespace esphome
       frame[CHECKSUM_BYTE] = sum;
     }
 
-    void Daikin200Climate::send_frame()
-    {
-      auto transmit = this->transmitter_->transmit();
-      auto data = transmit.get_data();
+    
+void Daikin200Climate::send_frame() {
+  IRDaikin200 irdaikin(0);  // dummy pin (we don't use IRsend directly)
 
-      data->set_carrier_frequency(38000);
+  irdaikin.begin();
 
-      // Header
-      data->item(3500, 1700);
+  // -------------------------
+  // POWER
+  // -------------------------
+  bool on = (this->mode != climate::CLIMATE_MODE_OFF);
+  irdaikin.setPower(on);
 
-      for (int i = 0; i < 25; i++)
-      {
-        uint8_t b = frame[i];
+  // -------------------------
+  // MODE
+  // -------------------------
+  switch (this->mode) {
+    case climate::CLIMATE_MODE_COOL:
+      irdaikin.setMode(kDaikin200Cool);
+      break;
+    case climate::CLIMATE_MODE_HEAT:
+      irdaikin.setMode(kDaikin200Heat);
+      break;
+    case climate::CLIMATE_MODE_DRY:
+      irdaikin.setMode(kDaikin200Dry);
+      break;
+    case climate::CLIMATE_MODE_AUTO:
+      irdaikin.setMode(kDaikin200Auto);
+      break;
+    default:
+      irdaikin.setMode(kDaikin200Auto);
+      break;
+  }
 
-        for (int bit = 7; bit >= 0; bit--)
-        {
-          if (b & (1 << bit))
-          {
-            data->item(430, 1300);
-          }
-          else
-          {
-            data->item(430, 420);
-          }
-        }
-      }
+  // -------------------------
+  // TEMP
+  // -------------------------
+  irdaikin.setTemp((uint8_t)this->target_temperature);
 
-      data->item(430, 8000);
+  // -------------------------
+  // FAN (safe mapping)
+  // -------------------------
+  irdaikin.setFan(kDaikin200FanAuto);
 
-      transmit.perform();
-    }
+  // -------------------------
+  // SWING
+  // -------------------------
+  irdaikin.setSwingV(kDaikin200SwingVOn);
+
+  // -------------------------
+  // TRANSMIT via ESPHome
+  // -------------------------
+  auto call = this->transmitter_->transmit();
+
+  uint16_t raw[300];
+  uint16_t len = irdaikin.getRawBuf(raw);
+
+  std::vector<int> data;
+  data.reserve(len);
+
+  for (int i = 0; i < len; i++) {
+    data.push_back(raw[i]);
+  }
+
+  call.set_carrier_frequency(38000);
+  call.set_data(data);
+  call.perform();
+}
+
     void Daikin200Climate::process_received_frame(const uint8_t *data, size_t len)
     {
 
