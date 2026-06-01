@@ -14,8 +14,9 @@ Daikin200Climate = daikin200_ns.class_(
 )
 
 
-CONFIG_SCHEMA = climate.climate_schema(Daikin200Climate).extend(cv.COMPONENT_SCHEMA)
-
+CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend({
+    cv.GenerateID(): cv.declare_id(Daikin200Climate),
+}).extend(cv.COMPONENT_SCHEMA)
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
