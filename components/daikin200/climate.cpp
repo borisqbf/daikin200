@@ -190,6 +190,7 @@ namespace esphome
     void Daikin200Climate::send_frame()
     {
       auto tx = this->transmitter_->transmit();
+      tx.set_carrier_frequency(38000);
 
       // Header
       tx.item(3500, 1700);
@@ -199,20 +200,23 @@ namespace esphome
         uint8_t b = frame[i];
         ESP_LOGI("daikin200", "frame[%d]=0x%02X", i, b);
 
-        for (int bit = 0; bit < 8; bit++)
+        // MSB-first (IMPORTANT FIX)
+        for (int bit = 7; bit >= 0; bit--)
         {
           if (b & (1 << bit))
           {
-            tx.item(430, 1300);
+            tx.item(430, 1300); // '1'
           }
           else
           {
-            tx.item(430, 420);
+            tx.item(430, 420); // '0'
           }
         }
       }
 
-      tx.set_carrier_frequency(38000);
+      // Optional stop / gap (depends on protocol)
+      tx.item(430, 8000);
+
       tx.perform();
     }
 
