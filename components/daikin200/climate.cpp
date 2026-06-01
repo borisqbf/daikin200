@@ -194,7 +194,7 @@ namespace esphome
       auto transmit = this->transmitter_->transmit();
       auto data = transmit.get_data();
 
-      data.set_carrier_frequency(38000);
+      data->set_carrier_frequency(38000);
 
       std::vector<std::pair<uint32_t, uint32_t>> pulses;
 
@@ -221,7 +221,7 @@ namespace esphome
 
       for (auto &p : pulses)
       {
-        data.push_back(p);
+        data->push_back(p);
       }
 
       transmit.perform();
