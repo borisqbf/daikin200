@@ -195,8 +195,6 @@ namespace esphome
 
       auto *data = call.get_data();
 
-      data->clear(); // if available in your build (see note below)
-
       // Header
       data->item(3500, 1700);
 
