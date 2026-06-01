@@ -191,68 +191,48 @@ namespace esphome
 
     void Daikin200Climate::send_frame()
     {
-      if (this->transmitter_ == nullptr)
+      if (!this->transmitter_)
       {
-        ESP_LOGE("daikin200", "No transmitter configured");
+        ESP_LOGE("daikin200", "No transmitter set");
         return;
       }
 
       auto call = this->transmitter_->transmit();
+
       call.set_carrier_frequency(38000);
 
       std::vector<int> data;
-      data.reserve(400); // avoid reallocations
+      data.reserve(400);
 
-      // -----------------------------
-      // DAIKIN HEADER (IRremoteESP8266 standard)
-      // -----------------------------
-      constexpr int HEADER_MARK = 3500;
-      constexpr int HEADER_SPACE = 1700;
+      // Header
+      data.push_back(3500);
+      data.push_back(-1700);
 
-      constexpr int BIT_MARK = 430;
-      constexpr int ONE_SPACE = 1300;
-      constexpr int ZERO_SPACE = 420;
-
-      constexpr int FOOTER_MARK = 430;
-      constexpr int FOOTER_SPACE = 8000;
-
-      data.push_back(HEADER_MARK);
-      data.push_back(HEADER_SPACE);
-
-      // -----------------------------
-      // IRREMOTEESP8266 BIT ORDER: LSB FIRST per byte
-      // -----------------------------
       for (int i = 0; i < 25; i++)
       {
-        uint8_t b = this->frame[i];
+        uint8_t b = frame[i];
 
         for (int bit = 0; bit < 8; bit++)
         {
-          data.push_back(BIT_MARK);
+          data.push_back(430);
 
           if (b & (1 << bit))
           {
-            data.push_back(ONE_SPACE);
+            data.push_back(-1300);
           }
           else
           {
-            data.push_back(ZERO_SPACE);
+            data.push_back(-420);
           }
         }
       }
 
-      // -----------------------------
-      // FOOTER / STOP BIT
-      // -----------------------------
-      data.push_back(FOOTER_MARK);
-      data.push_back(FOOTER_SPACE);
+      data.push_back(430);
+      data.push_back(-8000);
 
       call.set_data(data);
       call.perform();
-
-      ESP_LOGD("daikin200", "Sent Daikin200 frame (%d bytes encoded)", data.size());
     }
-
     void Daikin200Climate::process_received_frame(const uint8_t *data, size_t len)
     {
 
