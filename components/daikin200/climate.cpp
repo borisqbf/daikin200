@@ -195,36 +195,34 @@ namespace esphome
 
     
 void Daikin200Climate::send_frame() {
-  IRDaikin200 irdaikin(0);  // dummy pin (we don't use IRsend directly)
+  auto call = this->transmitter_->transmit();
+  auto *data = call.get_data();
 
-  irdaikin.begin();
+  data->mark(3500);
+  data->space(1700);
 
-  // -------------------------
-  // POWER
-  // -------------------------
-  bool on = (this->mode != climate::CLIMATE_MODE_OFF);
-  irdaikin.setPower(on);
+  for (int i = 0; i < 25; i++) {
+    uint8_t b = frame[i];
 
-  // -------------------------
-  // MODE
-  // -------------------------
-  switch (this->mode) {
-    case climate::CLIMATE_MODE_COOL:
-      irdaikin.setMode(kDaikin200Cool);
-      break;
-    case climate::CLIMATE_MODE_HEAT:
-      irdaikin.setMode(kDaikin200Heat);
-      break;
-    case climate::CLIMATE_MODE_DRY:
-      irdaikin.setMode(kDaikin200Dry);
-      break;
-    case climate::CLIMATE_MODE_AUTO:
-      irdaikin.setMode(kDaikin200Auto);
-      break;
-    default:
-      irdaikin.setMode(kDaikin200Auto);
-      break;
+    ESP_LOGV(TAG, "frame[%d]=0x%02X", i, b);
+
+    for (int bit = 7; bit >= 0; bit--) {
+      if (b & (1 << bit)) {
+        data->mark(430);
+        data->space(1300);
+      } else {
+        data->mark(430);
+        data->space(420);
+      }
+    }
   }
+
+  // stop gap (important for Daikin framing)
+  data->mark(430);
+  data->space(8000);
+
+  call.perform();
+}
 
   // -------------------------
   // TEMP
