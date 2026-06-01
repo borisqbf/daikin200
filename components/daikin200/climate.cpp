@@ -189,14 +189,7 @@ namespace esphome
 
     void Daikin200Climate::send_frame()
     {
-      // Placeholder for ESPHome IR transmission
-
-      ESP_LOGD(TAG, "Sending IR frame (not implemented yet)");
-      for (int i = 0; i < 25; i++)
-      {
-      }
-
-      auto tx = this->transmitter_->transmit_raw();
+      auto tx = this->transmitter_->transmit();
 
       // Header
       tx.item(3500, 1700);
