@@ -8,7 +8,7 @@ from . import Daikin200Climate
 DEPENDENCIES = ["climate"]
 
 CONFIG_SCHEMA = cv.Schema({
-    cv.GenerateID(): cv.declare_id(Daikin200Climate),
+    cv.GenerateID(CONF_ID): cv.declare_id(Daikin200Climate),
 }).extend(cv.COMPONENT_SCHEMA)
 
 
