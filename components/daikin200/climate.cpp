@@ -189,46 +189,43 @@ namespace esphome
       frame[CHECKSUM_BYTE] = sum;
     }
 
-void Daikin200Climate::send_frame()
-{
-  auto call = this->transmitter_->transmit();
-
-  call.set_carrier_frequency(38000);
-
-  std::vector<int> data;
-
-  // Header
-  data.push_back(3500);
-  data.push_back(1700);
-
-  for (int i = 0; i < 25; i++)
-  {
-    uint8_t b = frame[i];
-
-    ESP_LOGI("daikin200", "frame[%d]=0x%02X", i, b);
-
-    for (int bit = 7; bit >= 0; bit--)
+    void Daikin200Climate::send_frame()
     {
-      if (b & (1 << bit))
+      auto transmit = this->transmitter_->transmit();
+      auto data = transmit.get_data();
+
+      data.set_carrier_frequency(38000);
+
+      std::vector<std::pair<uint32_t, uint32_t>> pulses;
+
+      pulses.emplace_back(3500, 1700);
+
+      for (int i = 0; i < 25; i++)
       {
-        data.push_back(430);
-        data.push_back(1300);
+        uint8_t b = frame[i];
+
+        for (int bit = 7; bit >= 0; bit--)
+        {
+          if (b & (1 << bit))
+          {
+            pulses.emplace_back(430, 1300);
+          }
+          else
+          {
+            pulses.emplace_back(430, 420);
+          }
+        }
       }
-      else
+
+      pulses.emplace_back(430, 8000);
+
+      for (auto &p : pulses)
       {
-        data.push_back(430);
-        data.push_back(420);
+        data.push_back(p);
       }
+
+      transmit.perform();
     }
-  }
-
-  // Stop gap
-  data.push_back(430);
-  data.push_back(8000);
-
-  call.set_data(data);
-  call.perform();
-}
 
     void Daikin200Climate::process_received_frame(const uint8_t *data, size_t len)
     {
