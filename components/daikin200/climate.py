@@ -8,18 +8,19 @@ from esphome.const import CONF_ID, CONF_NAME
 
 from . import Daikin200Climate
 
-CCONFIG_SCHEMA = climate._CLIMATE_SCHEMA.extend({
+CONFIG_SCHEMA = climate._CLIMATE_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(Daikin200Climate),
-
     cv.Required("remote_transmitter"): cv.use_id(cg.Component),
 }).extend(cv.COMPONENT_SCHEMA)
 
 
 def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
-
     tx = yield cg.get_variable(config["remote_transmitter"])
     cg.add(var.set_transmitter(tx))
 
     yield cg.register_component(var, config)
     yield climate.register_climate(var, config)
+
+
+climate.register_climate_platform("daikin200", CONFIG_SCHEMA)
