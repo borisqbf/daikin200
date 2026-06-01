@@ -8,9 +8,8 @@ from . import Daikin200Climate
 DEPENDENCIES = ["climate"]
 
 CONFIG_SCHEMA = cv.Schema({
-    cv.GenerateID(CONF_ID): cv.declare_id(Daikin200Climate),
-}).extend(cv.COMPONENT_SCHEMA)
-
+    cv.GenerateID(): cv.declare_id(Daikin200Climate),
+}).extend(climate.CLIMATE_SCHEMA).extend(cv.COMPONENT_SCHEMA)
 
 def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
