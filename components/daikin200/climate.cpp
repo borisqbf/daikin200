@@ -189,46 +189,38 @@ namespace esphome
       frame[CHECKSUM_BYTE] = sum;
     }
 
-    void Daikin200Climate::send_frame() {
-  if (!this->transmitter_) {
-    ESP_LOGE("daikin200", "No transmitter configured");
-    return;
-  }
+    void Daikin200Climate::send_frame()
+    {
+      auto call = this->transmitter_->transmit();
 
-  auto call = this->transmitter_->transmit();
+      auto *data = call.get_data();
 
-  // IMPORTANT: carrier is NOT set here anymore in many builds
-  // It comes from YAML:
-  // carrier_duty_percent: 50%
+      data->clear(); // if available in your build (see note below)
 
-  auto *data = call.get_data();
-  data->clear();
+      // Header
+      data->item(3500, 1700);
 
-  // Header
-  data->push_back(3500);
-  data->push_back(-1700);
+      for (int i = 0; i < 25; i++)
+      {
+        uint8_t b = frame[i];
 
-  for (int i = 0; i < 25; i++) {
-    uint8_t b = frame[i];
-
-    for (int bit = 0; bit < 8; bit++) {
-      data->push_back(430);
-
-      if (b & (1 << bit)) {
-        data->push_back(-1300);
-      } else {
-        data->push_back(-420);
+        for (int bit = 7; bit >= 0; bit--)
+        {
+          if (b & (1 << bit))
+          {
+            data->item(430, 1300);
+          }
+          else
+          {
+            data->item(430, 420);
+          }
+        }
       }
+
+      data->item(430, 8000);
+
+      call.perform();
     }
-  }
-
-  // Stop
-  data->push_back(430);
-  data->push_back(-8000);
-
-  call.perform();
-}
-
 
     void Daikin200Climate::process_received_frame(const uint8_t *data, size_t len)
     {
