@@ -1,12 +1,13 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import climate
-from esphome.const import CONF_ID
+from esphome.const import CONF_ID, CONF_NAME
 
 from . import Daikin200Climate
 
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(Daikin200Climate),
+    cv.Required(CONF_NAME): cv.string,
 }).extend(cv.COMPONENT_SCHEMA)
 
 def to_code(config):
