@@ -1,8 +1,0 @@
-name: daikin200
-version: 1.0.0
-
-codeowners:
-  - Boris Klyachko
-
-dependencies:
-  - esphome
