@@ -3,10 +3,6 @@
 #include "climate.h"
 #include "esphome/core/log.h"
 
-#include <IRremoteESP8266.h>
-#include <IRsend.h>
-#include <ir_Daikin.h>
-
 namespace esphome
 {
   namespace daikin200
