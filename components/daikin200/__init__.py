@@ -1,3 +1,4 @@
+print("\n\n🔥 DAIKIN200 INIT LOADED 🔥\n\n")
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import climate
@@ -21,4 +22,3 @@ async def to_code(config):
     var = cg.new_Pvariable(config[cv.ID])
     await cg.register_component(var, config)
     await climate.register_climate(var, config)
-    
